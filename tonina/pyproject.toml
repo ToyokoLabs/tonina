@@ -1,0 +1,10 @@
+[project]
+name = "tonina"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "biopython>=1.85",
+    "pandas>=2.3.3",
+]
