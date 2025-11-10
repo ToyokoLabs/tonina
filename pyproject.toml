@@ -25,3 +25,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 tonina = ["prompts/*.txt"]
+
+[project.urls]
+Homepage = "https://github.com/ToyokoLabs/tonina
+Repository = "https://github.com/ToyokoLabs/tonina"
