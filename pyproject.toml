@@ -27,5 +27,5 @@ where = ["src"]
 tonina = ["prompts/*.txt"]
 
 [project.urls]
-Homepage = "https://github.com/ToyokoLabs/tonina
+Homepage = "https://github.com/ToyokoLabs/tonina"
 Repository = "https://github.com/ToyokoLabs/tonina"
