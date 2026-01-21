@@ -75,9 +75,11 @@ class BaseAgent(ABC):
             host = getattr(args, 'host', None) or os.getenv('OLLAMA_HOST', 'http://localhost:11434')
             return OllamaModel(
                 model_id=args.model,
-                host=host,
                 max_tokens=getattr(args, 'max_tokens', 4096),
-                temperature=getattr(args, 'temperature', 0.1)
+                params={
+                    'host': host,
+                    'temperature': getattr(args, 'temperature', 0.1)
+                }
             )
         
         # Anthropic model configuration
@@ -86,12 +88,16 @@ class BaseAgent(ABC):
             if not api_key:
                 raise ValueError("ANTHROPIC_API_KEY environment variable is required for Anthropic models")
             
-            model_id = args.model or os.getenv('DEFAULT_ANTHROPIC_MODEL', 'claude-3-5-sonnet-latest')
+            model_id = args.model or os.getenv('DEFAULT_ANTHROPIC_MODEL', 'claude-3-5-haiku-latest')
             return AnthropicModel(
+                client_args={
+                    'api_key': api_key
+                },
                 model_id=model_id,
-                api_key=api_key,
                 max_tokens=getattr(args, 'max_tokens', 4096),
-                temperature=getattr(args, 'temperature', 0.1)
+                params={
+                    'temperature': getattr(args, 'temperature', 0.1)
+                }
             )
         
         # Gemini model configuration
@@ -102,10 +108,14 @@ class BaseAgent(ABC):
             
             model_id = args.model or os.getenv('DEFAULT_GEMINI_MODEL', 'gemini-2.0-flash-exp')
             return GeminiModel(
+                client_args={
+                    'api_key': api_key
+                },
                 model_id=model_id,
-                api_key=api_key,
                 max_tokens=getattr(args, 'max_tokens', 4096),
-                temperature=getattr(args, 'temperature', 0.1)
+                params={
+                    'temperature': getattr(args, 'temperature', 0.1)
+                }
             )
         
         # OpenAI model configuration
@@ -116,10 +126,14 @@ class BaseAgent(ABC):
             
             model_id = args.model or os.getenv('DEFAULT_OPENAI_MODEL', 'gpt-4o')
             return OpenAIModel(
+                client_args={
+                    'api_key': api_key
+                },
                 model_id=model_id,
-                api_key=api_key,
                 max_tokens=getattr(args, 'max_tokens', 4096),
-                temperature=getattr(args, 'temperature', 0.1)
+                params={
+                    'temperature': getattr(args, 'temperature', 0.1)
+                }
             )
         
         # Default to Ollama
@@ -128,9 +142,11 @@ class BaseAgent(ABC):
             model_id = getattr(args, 'model', None) or os.getenv('DEFAULT_OLLAMA_MODEL', 'llama3.1')
             return OllamaModel(
                 model_id=model_id,
-                host=host,
                 max_tokens=getattr(args, 'max_tokens', 4096),
-                temperature=getattr(args, 'temperature', 0.1)
+                params={
+                    'host': host,
+                    'temperature': getattr(args, 'temperature', 0.1)
+                }
             )
     
     def filter_tools_for_security(self, tools: List, server_type: str, provider: str) -> List:
@@ -182,11 +198,12 @@ class BaseAgent(ABC):
         tools = self.get_tools(server_type, provider)
         filtered_tools = self.filter_tools_for_security(tools, server_type, provider)
         
-        # Create agent
+        # Create agent with configuration to prevent duplicate responses
         self.agent = Agent(
             system_prompt=self.system_prompt,
             model=model,
-            tools=filtered_tools
+            tools=filtered_tools,
+            record_direct_tool_call=False  # Prevent duplicate tool call records in conversation history
         )
         
         return self.agent
@@ -222,8 +239,9 @@ class BaseAgent(ABC):
         """
         if not self.agent:
             raise RuntimeError(f"Agent {self.agent_name} not initialized. Call initialize_agent() first.")
-        
-        return self.agent.run(query)
+        response = self.agent(query)
+        return response.message.content[-1]['text']    
+
     
     def can_handle_query(self, query: str, file_path: Optional[str] = None) -> float:
         """

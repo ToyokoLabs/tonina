@@ -10,6 +10,7 @@ import csv
 from strands import tool
 import gffutils
 from Bio import Entrez
+from typing import List
 
 
 def get_db_filename(gffpath: str) -> str:
@@ -23,6 +24,68 @@ def get_db_filename(gffpath: str) -> str:
     """
     base_name = os.path.splitext(gffpath)[0]
     return f"{base_name}.db"
+
+
+@tool
+def extract_genes_to_gff(gene_ids: List[str], gff_file: str, output_file: str = "subset.gff", db_file: str = "annotations.db") -> str:
+    """
+    Extracts a specific list of genes and their associated features (mRNA, exons, CDS) 
+    from a GFF3 file and saves them to a new file.
+
+    Args:
+        gene_ids (List[str]): A list of Gene IDs to extract (e.g., ['gene1', 'gene2']).
+        gff_file (str): Path to the source GFF3 annotation file.
+        output_file (str): Path where the extracted GFF should be saved.
+        db_file (str): Path to the sqlite3 database file (created if not exists).
+
+    Returns:
+        str: A summary message indicating how many genes were found and saved.
+    """
+    
+    # 1. Initialize or Load Database
+    if not os.path.exists(db_file):
+        try:
+            print(f"Creating database from {gff_file}...")
+            db = gffutils.create_db(gff_file, db_file, force=True, keep_order=True,
+                                    merge_strategy='create_unique', sort_attribute_values=True)
+        except Exception as e:
+            return f"Error creating database: {str(e)}"
+    else:
+        db = gffutils.FeatureDB(db_file, keep_order=True)
+
+    found_count = 0
+    missing_ids = []
+
+    try:
+        with open(output_file, 'w') as out_handle:
+            # Write GFF directives (headers) so the file is valid for tools like JBrowse
+            for directive in db.directives:
+                out_handle.write(f'##{directive}\n')
+
+            for gene_id in gene_ids:
+                try:
+                    # Retrieve the parent gene
+                    gene = db[gene_id]
+                    out_handle.write(str(gene) + '\n')                    
+                    # Retrieve all children recursively (mRNA, exon, CDS, UTR)
+                    # order_by='start' ensures they are written in genomic order
+                    for child in db.children(gene, order_by='start'):
+                        out_handle.write(str(child) + '\n')
+                    
+                    found_count += 1
+                    
+                except gffutils.feature.FeatureNotFoundError:
+                    missing_ids.append(gene_id)
+
+    except IOError as e:
+        return f"Error writing to file {output_file}: {str(e)}"
+
+    result_msg = f"Success. Extracted {found_count} genes to '{output_file}'."
+    
+    if missing_ids:
+        result_msg += f" Warning: {len(missing_ids)} IDs were not found: {', '.join(missing_ids)}"
+        
+    return result_msg
 
 
 @tool

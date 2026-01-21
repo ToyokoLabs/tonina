@@ -12,6 +12,7 @@ from ...tools.file_operations import file_read, file_write, list_files, get_file
 
 # Import all GFF-specific tools
 from .gff_tools import (
+    extract_genes_to_gff,
     get_organism_info, get_gff_feature_types, get_gene_lenght, get_gene_attributes,
     get_multiple_gene_lenght, get_all_attributes, get_genes_and_features_from_attribute,
     get_protein_product_from_gene, get_features_in_region, get_features_at_position,
@@ -58,6 +59,7 @@ class GFFAgent(BaseAgent):
         
         # GFF-specific analysis tools
         gff_tools = [
+            extract_genes_to_gff,
             get_organism_info, get_gff_feature_types, get_gene_lenght, get_gene_attributes,
             get_multiple_gene_lenght, get_all_attributes, get_genes_and_features_from_attribute,
             get_protein_product_from_gene, get_features_in_region, get_features_at_position,
